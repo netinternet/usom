@@ -1,4 +1,4 @@
-package scanner
+package usom
 
 import (
 	"encoding/xml"
@@ -137,17 +137,17 @@ value is total url search count
 filtertime is value of time filtering as timestamp
 
 
-usage: usom(masks, time.Millisecond*100)
+usage: usom(masks, 100)
 
 if view the results
 
-	list := usom(masks,time.Millisecond*100)
+	list := usom(masks,100)
 	for _, v := range list {
 		fmt.Println(v.Hostname, v.IP)
 	}
 
 */
-func Usom(masks []string, speed time.Duration) []Pong {
+func Scan(masks []string, speed int) []Pong {
 	list := []Pong{}
 	bar := pb.StartNew(0)
 	usomUrlList, _ := httplib.Get("https://www.usom.gov.tr/url-list.xml").Bytes()
@@ -160,7 +160,7 @@ func Usom(masks []string, speed time.Duration) []Pong {
 			bar.Increment()
 			j, more := <-jobs
 			if more {
-				ipaddr, _ := Lookup(Cleanurl(j), speed)
+				ipaddr, _ := Lookup(Cleanurl(j), time.Millisecond*time.Duration(speed))
 				if ipaddr != nil {
 					for _, v := range ipaddr {
 						if Isinside(v, masks) != nil {
@@ -183,7 +183,7 @@ func Usom(masks []string, speed time.Duration) []Pong {
 	return list
 }
 
-func UsomDaily(masks []string, speed time.Duration) []Pong {
+func Scandaily(masks []string, speed time.Duration) []Pong {
 	list := []Pong{}
 	var s, _ = time.Parse("2006-01-02 15:04:05", time.Now().Local().Format("2006-01-02 15:04:05"))
 	var lastDay = s.Unix() - 86400
