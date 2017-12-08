@@ -17,7 +17,7 @@ package main
 import (
 	"fmt"
 	"time"
-	s "github.com/kevsersrca/usom"
+	s "github.com/netinternet/usom"
 )
 
 func main() {
