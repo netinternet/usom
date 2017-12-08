@@ -160,8 +160,7 @@ func Scan(masks []string, speed int) []Pong {
 				if ipaddr != nil {
 					for _, v := range ipaddr {
 						if Isinside(v, masks) != nil {
-							temp := Pong{IP: v, Hostname: Cleanurl(j)}
-							list = append(list, temp)
+							list = append(list, Pong{IP: v, Hostname: Cleanurl(j)})
 						}
 					}
 				}
@@ -179,11 +178,11 @@ func Scan(masks []string, speed int) []Pong {
 	return list
 }
 
-func Scandaily(masks []string, speed time.Duration) []Pong {
+func Scandaily(masks []string, speed int) ([]Pong, []Pong) {
 	list := []Pong{}
+	scanned := []Pong{}
 	var s, _ = time.Parse("2006-01-02 15:04:05", time.Now().Local().Format("2006-01-02 15:04:05"))
 	var lastDay = s.Unix() - 86400
-	bar := pb.StartNew(0)
 	usomUrlList, _ := httplib.Get("https://www.usom.gov.tr/url-list.xml").Bytes()
 	xml.Unmarshal(usomUrlList, &t)
 
@@ -191,15 +190,14 @@ func Scandaily(masks []string, speed time.Duration) []Pong {
 	done := make(chan bool)
 	go func() {
 		for {
-			bar.Increment()
 			j, more := <-jobs
 			if more {
-				ipaddr, _ := Lookup(Cleanurl(j), speed)
+				ipaddr, _ := Lookup(Cleanurl(j), time.Millisecond*time.Duration(speed))
 				if ipaddr != nil {
 					for _, v := range ipaddr {
+						scanned = append(scanned, Pong{IP: v, Hostname: Cleanurl(j)})
 						if Isinside(v, masks) != nil {
-							temp := Pong{IP: v, Hostname: Cleanurl(j)}
-							list = append(list, temp)
+							list = append(list, Pong{IP: v, Hostname: Cleanurl(j)})
 						}
 					}
 				}
@@ -217,5 +215,5 @@ func Scandaily(masks []string, speed time.Duration) []Pong {
 	}
 	close(jobs)
 	<-done
-	return list
+	return list, scanned
 }
