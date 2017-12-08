@@ -131,17 +131,13 @@ Scan usom blocked url list inside your ip mask
 if it find , assign list struct slice
 masks are contains ip ranges
 ex: var masks = []string{"31.192.208.0/21", "89.43.28.0/22"}
+the speed sleep down as the speed values increases
 
-value is total url search count
-
-filtertime is value of time filtering as timestamp
-
-
-usage: Scan(masks, 100)
+usage: Scan(masks, 10)
 
 if view the results
 
-	list := Scan(masks,100)
+	list := Scan(masks,10)
 	for _, v := range list {
 		fmt.Println(v.Hostname, v.IP)
 	}

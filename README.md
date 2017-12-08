@@ -20,7 +20,8 @@ import (
 )
 
 func main() {
-	list := usom.Scan([]string{"89.43.28.0/22"}, 1)
+	masks := []string{"89.43.28.0/22", "89.43.26.0/22"}
+	list := usom.Scan(masks, 10)
 	for _, v := range list {
 		fmt.Println(v.Hostname, v.IP)
 	}
