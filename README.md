@@ -16,16 +16,16 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"github.com/netinternet/usom"
 )
 
 func main() {
-	list := usom.Scan([]string{"89.43.28.0/22"}, 100)
+	list := usom.Scan([]string{"89.43.28.0/22"}, 1)
 	for _, v := range list {
 		fmt.Println(v.Hostname, v.IP)
 	}
 }
+
 
 
 ```
