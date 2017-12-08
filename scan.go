@@ -137,11 +137,11 @@ value is total url search count
 filtertime is value of time filtering as timestamp
 
 
-usage: usom(masks, 100)
+usage: Scan(masks, 100)
 
 if view the results
 
-	list := usom(masks,100)
+	list := Scan(masks,100)
 	for _, v := range list {
 		fmt.Println(v.Hostname, v.IP)
 	}
