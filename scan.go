@@ -1,8 +1,8 @@
 package usom
 
 import (
+	"context"
 	"encoding/xml"
-	"errors"
 	"net"
 	"strings"
 	"time"
@@ -55,43 +55,8 @@ type Pong struct {
 Global Variables
 */
 var t = UsomData{}
-
-/*
-Lookup Method with timeout duration
-works concurrently
-
-usage: Lookup("garantinternetsubem.com", time.Millisecond*100)
-note: If "http://" or "/asd/qwe" are in the url , function it will not work properly
-therefore you should use with cleanUrl method
-usage: Lookup(cleanUrl("garantinternetsubem.com"), time.Millisecond*100)
-*/
-func Lookup(hostname string, timeout time.Duration) ([]string, error) {
-	c1 := make(chan []string)
-	c2 := make(chan error)
-
-	var ipaddr []string
-	var err error
-
-	go func() {
-		var ipaddr []string
-		ipaddr, err := net.LookupHost(hostname)
-		if err != nil {
-			c2 <- err
-		}
-		c1 <- ipaddr
-	}()
-
-	select {
-	case ipaddr = <-c1:
-	case err = <-c2:
-	case <-time.After(timeout):
-		return ipaddr, errors.New("Timeout")
-	}
-	if err != nil {
-		return ipaddr, errors.New("Timeout")
-	}
-	return ipaddr, nil
-}
+var usomUrlList, _ = httplib.Get("https://www.usom.gov.tr/url-list.xml").Bytes()
+var done = xml.Unmarshal(usomUrlList, &t)
 
 /*
 clean up the url distorting characters
@@ -156,7 +121,8 @@ func Scan(masks []string, speed int) []Pong {
 			bar.Increment()
 			j, more := <-jobs
 			if more {
-				ipaddr, _ := Lookup(Cleanurl(j), time.Millisecond*time.Duration(speed))
+				ctx, _ := context.WithTimeout(context.Background(), time.Duration(speed)*time.Millisecond)
+				ipaddr, _ := net.DefaultResolver.LookupHost(ctx, Cleanurl(j))
 				if ipaddr != nil {
 					for _, v := range ipaddr {
 						if Isinside(v, masks) != nil {
@@ -178,13 +144,11 @@ func Scan(masks []string, speed int) []Pong {
 	return list
 }
 
-func Scandaily(masks []string, speed int) ([]Pong, []Pong) {
+func Scandaily(masks []string, speed int) map[string]interface{} {
 	list := []Pong{}
 	scanned := []Pong{}
 	var s, _ = time.Parse("2006-01-02 15:04:05", time.Now().Local().Format("2006-01-02 15:04:05"))
 	var lastDay = s.Unix() - 86400
-	usomUrlList, _ := httplib.Get("https://www.usom.gov.tr/url-list.xml").Bytes()
-	xml.Unmarshal(usomUrlList, &t)
 
 	jobs := make(chan string)
 	done := make(chan bool)
@@ -192,7 +156,8 @@ func Scandaily(masks []string, speed int) ([]Pong, []Pong) {
 		for {
 			j, more := <-jobs
 			if more {
-				ipaddr, _ := Lookup(Cleanurl(j), time.Millisecond*time.Duration(speed))
+				ctx, _ := context.WithTimeout(context.Background(), time.Duration(speed)*time.Millisecond)
+				ipaddr, _ := net.DefaultResolver.LookupHost(ctx, Cleanurl(j))
 				if ipaddr != nil {
 					for _, v := range ipaddr {
 						scanned = append(scanned, Pong{IP: v, Hostname: Cleanurl(j)})
@@ -215,5 +180,9 @@ func Scandaily(masks []string, speed int) ([]Pong, []Pong) {
 	}
 	close(jobs)
 	<-done
-	return list, scanned
+
+	e := make(map[string]interface{})
+	e["scanned"] = scanned
+	e["results"] = list
+	return e
 }
