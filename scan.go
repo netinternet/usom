@@ -1,78 +1,14 @@
-package usom
+package Usom
 
 import (
 	"context"
 	"encoding/xml"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/astaxie/beego/httplib"
 	"gopkg.in/cheggaaa/pb.v1"
 )
-
-/*
-XML Parsing Structs for https://www.usom.gov.tr/url-list.xml
-*/
-type UsomData struct {
-	XMLName xml.Name `xml:"usom-data"`
-	XMLInfo XMLInfo  `xml:"xml-info"`
-	UrlList UrlList  `xml:"url-list"`
-}
-
-type XMLInfo struct {
-	XMLName xml.Name `xml:"xml-info"`
-	Updated string   `xml:"updated"`
-	Author  string   `xml:"author"`
-}
-
-type UrlList struct {
-	XMLName xml.Name  `xml:"url-list"`
-	UrlInfo []UrlInfo `xml:"url-info"`
-}
-
-type UrlInfo struct {
-	XMLName xml.Name `xml:"url-info"`
-	Id      int32    `xml:"id"`
-	Url     string   `xml:"url"`
-	Desc    string   `xml:"desc"`
-	Source  string   `xml:"source"`
-	Date    string   `xml:"date"`
-}
-
-/*
-Pong structs
-for the ip address and hostnames in the given network
-shortly: result struct
-*/
-
-type Pong struct {
-	IP       string
-	Hostname string
-}
-
-/*
-Global Variables
-*/
-var t = UsomData{}
-var usomUrlList, _ = httplib.Get("https://www.usom.gov.tr/url-list.xml").Bytes()
-var done = xml.Unmarshal(usomUrlList, &t)
-
-/*
-clean up the url distorting characters
-*/
-func Cleanurl(url string) string {
-	if strings.Contains(url, "https://") {
-		return Cleanurl(strings.Split(url, "https://")[1])
-	}
-	if strings.Contains(url, "http://") {
-		return Cleanurl(strings.Split(url, "http://")[1])
-	}
-	if strings.ContainsAny(url, "/") {
-		return strings.Split(url, "/")[0]
-	}
-	return url
-}
 
 /*
 the given ip address on the ip mask
@@ -145,47 +81,4 @@ func Scan(masks []string, speed int) []Pong {
 	close(jobs)
 	<-done
 	return list
-}
-
-func Scandaily(masks []string, speed int) map[string]interface{} {
-	list := []Pong{}
-	scanned := []Pong{}
-	var s, _ = time.Parse("2006-01-02 15:04:05", time.Now().Local().Format("2006-01-02 15:04:05"))
-	var lastDay = s.Unix() - 86400
-
-	jobs := make(chan string)
-	done := make(chan bool)
-	go func() {
-		for {
-			j, more := <-jobs
-			if more {
-				ctx, _ := context.WithTimeout(context.Background(), time.Duration(speed)*time.Millisecond)
-				ipaddr, _ := net.DefaultResolver.LookupHost(ctx, Cleanurl(j))
-				if ipaddr != nil {
-					for _, v := range ipaddr {
-						scanned = append(scanned, Pong{IP: v, Hostname: Cleanurl(j)})
-						if Isinside(v, masks) != nil {
-							list = append(list, Pong{IP: v, Hostname: Cleanurl(j)})
-						}
-					}
-				}
-			} else {
-				done <- true
-				return
-			}
-		}
-	}()
-	for _, url := range t.UrlList.UrlInfo {
-		p, _ := time.Parse("2006-01-02 15:04:05", url.Date)
-		if p.Unix() > lastDay {
-			jobs <- url.Url
-		}
-	}
-	close(jobs)
-	<-done
-
-	e := make(map[string]interface{})
-	e["scanned"] = scanned
-	e["results"] = list
-	return e
 }
