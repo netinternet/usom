@@ -2,8 +2,11 @@ package Usom
 
 import (
 	"context"
+	"encoding/xml"
 	"net"
 	"time"
+
+	"github.com/astaxie/beego/httplib"
 )
 
 func Scandaily(masks []string, speed int) map[string]interface{} {
@@ -11,6 +14,8 @@ func Scandaily(masks []string, speed int) map[string]interface{} {
 	scanned := []Pong{}
 	var s, _ = time.Parse("2006-01-02 15:04:05", time.Now().Local().Format("2006-01-02 15:04:05"))
 	var lastDay = s.Unix() - 86400
+	usomUrlList, _ := httplib.Get("https://www.usom.gov.tr/url-list.xml").Bytes()
+	xml.Unmarshal(usomUrlList, &t)
 
 	jobs := make(chan string)
 	done := make(chan bool)
